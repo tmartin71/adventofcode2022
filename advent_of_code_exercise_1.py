@@ -1,18 +1,14 @@
 import numpy as np
 
-input_path_exercise_1 = '/Users/tylermartin/Documents/adventofcode2022/input.txt'
+from advent_of_code_utils import AdventOfCodeUtils
 
-def open_input(path):
-    file = open(path, mode = 'r', encoding = 'utf-8-sig')
-    lines = file.readlines()
-    file.close()
-    return lines
+input_filename_exercise_1 = 'input_exercise_1.txt'
 
 def get_int_from_line(line):
     return int(line.strip())
 
 def exercise_1():
-    lines = open_input(input_path_exercise_1)
+    lines = AdventOfCodeUtils.open_input(input_filename_exercise_1)
 
     elves = []
     elf = []
@@ -33,6 +29,6 @@ def exercise_1():
     print(np.sum(top_3))
     return
 
-if __name__=="__main__":
+if __name__ == "__main__":
     exercise_1()
 
