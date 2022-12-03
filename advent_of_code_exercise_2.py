@@ -132,7 +132,8 @@ def compute_score_from_desired_outcome(player_1_choice, player_1_map, player_2_c
     player_1_shape = player_1_map[player_1_choice]
     desired_outcome = player_2_outcome_map[player_2_choice]
     score = 0
-    for shape in RockPaperScissorsFactory.get_all_shapes():
+    all_shapes = RockPaperScissorsFactory.get_all_shapes()
+    for shape in all_shapes:
         if shape.CompareShape(player_1_shape) == desired_outcome:
             score += shape.GetShapeScore()
 
