@@ -1,0 +1,5 @@
+from advent_of_code_utils import AdventOfCodeUtils
+
+
+if __name__ == "__main__":
+    exercise_3();

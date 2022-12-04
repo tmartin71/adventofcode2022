@@ -1,4 +1,3 @@
-from doctest import debug_script
 from advent_of_code_utils import AdventOfCodeUtils
 from enum import Enum
 
