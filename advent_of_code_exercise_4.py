@@ -43,10 +43,11 @@ def exercise_4():
         if range_lhs.get_length() <= range_rhs.get_length():
             range_lhs, range_rhs = range_rhs, range_lhs
 
-        if range_lhs.contains(range_rhs):
+        contains = range_lhs.contains(range_rhs)
+        if contains:
             total_part_1 += 1
 
-        if range_lhs.overlaps(range_rhs):
+        if contains or range_lhs.overlaps(range_rhs):
             total_part_2 += 1
 
     print(total_part_1)

@@ -7,9 +7,8 @@ input_filename_exercise_1 = 'input_exercise_1.txt'
 def get_int_from_line(line):
     return int(line.strip())
 
-def exercise_1():
+def exercise_1_task(line):
     lines = AdventOfCodeUtils.open_input(input_filename_exercise_1)
-
     elves = []
     elf = []
 

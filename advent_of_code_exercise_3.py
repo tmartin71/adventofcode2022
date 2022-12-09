@@ -57,16 +57,19 @@ class ElfGroup:
 
 def exercise_3():
     lines = AdventOfCodeUtils.open_input(input_filename_exercise_3)
+
     total_part_1 = 0
     total_part_2 = 0
     elf_count = 0
     rucksacks_in_group = []
+
     for line in lines:
         rucksack = Rucksack(line)
         rucksacks_in_group.append(rucksack)
 
         total_part_1 += compute_score(rucksack.compute_intersection())
         elf_count += 1
+
         if elf_count == 3:
             group = ElfGroup(rucksacks_in_group)
             total_part_2 += compute_score(group.compute_intersection())
