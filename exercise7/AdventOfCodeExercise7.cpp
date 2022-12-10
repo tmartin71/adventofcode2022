@@ -207,12 +207,22 @@ private:
     {   
         auto parentDir = n.GetParent();
         const auto fileSize = n.GetSize();
-        std::string relativePathName;
+        std::vector<std::string> directories;
         while (parentDir)
         {
-            relativePathName += parentDir->GetName();
-            m_directorySizes[relativePathName] += fileSize;
+            auto parentDirName = parentDir->GetName();
+            parentDirName = "/" + parentDirName;
+            directories.push_back(parentDirName);
             parentDir = parentDir->GetParent();
+        }
+
+        std::reverse(directories.begin(), directories.end());
+
+        std::string directoryName;
+        for (const auto& directory : directories)
+        {
+            directoryName += directory;
+            m_directorySizes[directoryName] += fileSize;
         }
     }
 
@@ -231,11 +241,11 @@ struct CommandInOut
     std::vector<std::string> output;
 };
 
-class CommandLexer
+class CommandParser
 {
 public:
-    CommandLexer() = default;
-    ~CommandLexer() = default;
+    CommandParser() = default;
+    ~CommandParser() = default;
 
     void VisitCommand(
         const std::string& command, const CommandInOut& inOut)
@@ -271,7 +281,7 @@ public:
         }
         else
         {
-            const auto contents = m_currentDirectory->GetContents();
+            const auto& contents = m_currentDirectory->GetContents();
             const auto itr = contents.find(inOut.input);
             assert(itr != contents.end());
             m_currentDirectory = std::dynamic_pointer_cast<DirNode>(itr->second);
@@ -302,12 +312,14 @@ private:
 void AdventOfCodeExercise7()
 {
     const auto lines = ReadTextFile("input_exercise_7.txt");
-    CommandLexer commandLexer;
+    CommandParser commandParser;
     CommandInOut inOut;
     std::string currentCommandName;
     for (auto i = 0; i < lines.size(); ++i)
     {
         const auto tokens = Split(lines[i], commandDelimiter);
+        assert(tokens.size() > 0);
+
         if (tokens[0] == "$")
         {
             // Processing a command
@@ -324,7 +336,7 @@ void AdventOfCodeExercise7()
         const auto nextLine = lines[i+1];
         if (nextLine.empty())
         {
-            commandLexer.VisitCommand(currentCommandName, inOut);
+            commandParser.VisitCommand(currentCommandName, inOut);
             break;
         }
 
@@ -333,7 +345,7 @@ void AdventOfCodeExercise7()
         {
             // We've reached the next command, so we have the input and output
             // for the current command. Visit it!
-            commandLexer.VisitCommand(currentCommandName, inOut);
+            commandParser.VisitCommand(currentCommandName, inOut);
             currentCommandName.clear();
             inOut.input.clear();
             inOut.output.clear();
@@ -342,7 +354,8 @@ void AdventOfCodeExercise7()
 
     const auto threshold = 100000;
     auto totalPart1 = 0;
-    const auto& directoriesAndSizes = DirectorySizeComputer::ComputeDirectoriesAndSizes(commandLexer.GetRoot());
+    const auto& directoriesAndSizes = 
+            DirectorySizeComputer::ComputeDirectoriesAndSizes(commandParser.GetRoot());
     for (const auto& directory : directoriesAndSizes)
     {
         if (directory.second <= threshold)
