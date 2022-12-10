@@ -6,6 +6,7 @@
 #include <vector>
 #include <unordered_map>
 #include <assert.h>
+#include <stdint.h>
 
 std::vector<std::string> ReadTextFile(std::string inputFilename)
 {
@@ -166,8 +167,9 @@ public:
         assert(inputStrings.size() == 2);
 
         if (inputStrings[0] == "dir")
-        {
-            return std::make_shared<DirNode>(inputStrings[1], parent);
+        {   
+            std::string fullyQualifiedPath = parent->GetName() + inputStrings[1] + "/";
+            return std::make_shared<DirNode>(fullyQualifiedPath, parent);
         }
         else
         {
@@ -207,22 +209,10 @@ private:
     {   
         auto parentDir = n.GetParent();
         const auto fileSize = n.GetSize();
-        std::vector<std::string> directories;
         while (parentDir)
         {
-            auto parentDirName = parentDir->GetName();
-            parentDirName = "/" + parentDirName;
-            directories.push_back(parentDirName);
+            m_directorySizes[parentDir->GetName()] += fileSize;
             parentDir = parentDir->GetParent();
-        }
-
-        std::reverse(directories.begin(), directories.end());
-
-        std::string directoryName;
-        for (const auto& directory : directories)
-        {
-            directoryName += directory;
-            m_directorySizes[directoryName] += fileSize;
         }
     }
 
@@ -282,7 +272,9 @@ public:
         else
         {
             const auto& contents = m_currentDirectory->GetContents();
-            const auto itr = contents.find(inOut.input);
+
+            std::string fullyQualifiedName = m_currentDirectory->GetName() + inOut.input + "/";
+            const auto itr = contents.find(fullyQualifiedName);
             assert(itr != contents.end());
             m_currentDirectory = std::dynamic_pointer_cast<DirNode>(itr->second);
         }
@@ -352,20 +344,36 @@ void AdventOfCodeExercise7()
         }
     }
 
-    const auto threshold = 100000;
+    const auto thresholdPart1 = 100000;
     auto totalPart1 = 0;
+
+    uint32_t totalPart2 = UINT32_MAX;
+    const auto totalDiskSpace = 70000000;
+    const auto neededDiskSpace = 30000000;
     const auto& directoriesAndSizes = 
             DirectorySizeComputer::ComputeDirectoriesAndSizes(commandParser.GetRoot());
+
+    const auto rootDir = directoriesAndSizes.find("/");
+    assert(rootDir != directoriesAndSizes.end());
+    const auto unusedSpace = totalDiskSpace - rootDir->second;
+    const auto thresholdPart2 = neededDiskSpace - unusedSpace;
+    
     for (const auto& directory : directoriesAndSizes)
     {
-        if (directory.second <= threshold)
+        if (directory.second <= thresholdPart1)
         {
-            std::cout << directory.first << std::endl;
             totalPart1 += directory.second;
         }
+
+        if (directory.second >= thresholdPart2)
+        {
+            totalPart2 = std::min(totalPart2, directory.second);
+        }
+
     }
 
     std::cout << totalPart1 << std::endl;
+    std::cout << totalPart2 << std::endl;
 }
 
 int main()
