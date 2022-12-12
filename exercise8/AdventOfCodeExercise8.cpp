@@ -126,8 +126,6 @@ bool CheckVisible(
     if (CheckVisibleAlongRow(matrix, row, col, 0, col, treeHeight))
         return true;
 
-    // TODO: there's something weird happening with the indices. 2,3 should be visible but it's not.
-    // We seem to be searching the wrong range
     // Check right
     if (CheckVisibleAlongRow(matrix, row, col, col, numCols, treeHeight))
         return true;
