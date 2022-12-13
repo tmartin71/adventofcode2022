@@ -30,7 +30,7 @@ class TreeMatrix
 public:
     TreeMatrix(const uint32_t numRows)
     {
-        m_matrix.reserve(numRows);
+        m_rows.reserve(numRows);
     }
 
     ~TreeMatrix() = default;
@@ -40,97 +40,106 @@ public:
         std::vector<uint32_t> values;
 
         const auto numCols = row.size();
+        m_cols.reserve(numCols);
         values.reserve(numCols);
         for (auto columnNumber = 0; columnNumber < numCols; ++columnNumber)
         {
-            values.push_back(std::stoi(row.substr(columnNumber, 1)));
+            const uint32_t v = std::stoi(row.substr(columnNumber, 1));
+            values.push_back(v);
+            if (m_cols[columnNumber].empty())
+            {
+                std::vector<uint32_t> newCol;
+                newCol.push_back(v);
+                m_cols.push_back(newCol);
+            }
+            else
+            {
+                m_cols[columnNumber].push_back(v);
+            }
         }
 
-        m_matrix.push_back(values);
+        m_rows.push_back(values);
     }
 
-    const std::vector<std::vector<uint32_t> >& GetMatrix() const
+    const std::vector<uint32_t>& GetColumn(const uint32_t colIndex) const
     {
-        return m_matrix;
+        return m_cols[colIndex];
+    }
+
+    const std::vector<uint32_t>& GetRow(const uint32_t rowIndex) const
+    {
+        return m_rows[rowIndex];
+    }
+
+    const uint32_t& GetTreeHeight(const uint32_t row, const uint32_t col) const
+    {
+        return m_rows[row][col];
     }
 
 private:
-    std::vector<std::vector<uint32_t> > m_matrix;
+    std::vector<std::vector<uint32_t> > m_rows;
+    std::vector<std::vector<uint32_t> > m_cols;
 };
 
-bool CheckVisibleAlongRow(
-    const std::vector<std::vector<uint32_t> >& matrix,
-    const uint32_t treeRow,
-    const uint32_t treeCol,
-    const uint32_t colStart,
-    const uint32_t colEnd,
+std::pair<bool, uint32_t> CheckVisibleAlongRowOrColumn(
+    const std::vector<uint32_t>& rowOrColumn,
+    const uint32_t treeRowOrColumn,
     const uint32_t treeHeight)
 {
-    for (auto i = colStart; i < colEnd; ++i)
+    bool isVisibleFromAbove = true;
+    uint32_t scenicScoreAbove = 0;
+    const auto numRowsOrCols = rowOrColumn.size();
+
+    // Check above
+    // Note we must use int here. Not doing so results in the loop always bailing immediately
+    // because unsigned 0 minus 1 is a large positive number
+    for (int i = treeRowOrColumn; i > -1; --i)
     {
-        if (i == treeCol)
+        if (i == treeRowOrColumn)
             continue;
 
-        if (matrix[treeRow][i] >= treeHeight)
-            return false;
+        scenicScoreAbove++;
+        if (rowOrColumn[i] >= treeHeight)
+        {
+            isVisibleFromAbove = false;
+            break;
+        }
     }
 
-    return true;
-}
-
-bool CheckVisibleAlongColumn(
-    const std::vector<std::vector<uint32_t> >& matrix,
-    const uint32_t treeRow,
-    const uint32_t treeCol,
-    const uint32_t rowStart,
-    const uint32_t rowEnd,
-    const uint32_t treeHeight)
-{
-    for (auto i = rowStart; i < rowEnd; ++i)
+    // Reset isVisible when searching in the other direction
+    bool isVisibleFromBelow = true;
+    uint32_t scenicScoreBelow = 0;
+    for (int i = treeRowOrColumn; i < numRowsOrCols; ++i)
     {
-        if (i == treeRow)
+        if (i == treeRowOrColumn)
             continue;
 
-        if (matrix[i][treeCol] >= treeHeight)
-            return false;
+        ++scenicScoreBelow;
+
+        if (rowOrColumn[i] >= treeHeight)
+        {
+            isVisibleFromBelow = false;
+            break;
+        }
     }
 
-    return true;
+    return std::make_pair(isVisibleFromAbove || isVisibleFromBelow, scenicScoreAbove * scenicScoreBelow);
 }
 
-bool CheckVisible(
-    const std::vector<std::vector<uint32_t> >& matrix, const uint32_t row, uint32_t col)
+std::pair<bool, uint32_t> CheckVisible(
+    const TreeMatrix& matrix, const uint32_t row, uint32_t col)
 {
-    const auto treeHeight = matrix[row][col];
-    const auto numRows = matrix.size();
-    assert(numRows > 0);
+    const auto treeHeight = matrix.GetTreeHeight(row, col);
 
-    const auto numCols = matrix[0].size();
+    // Check up and down
+    const auto column = matrix.GetColumn(col);
+    const auto visibleAndScenicScoreAlongColumn = CheckVisibleAlongRowOrColumn(column, row, treeHeight);
 
-    // TODO: note these conditions should not be hit while looping over interior nodes.
-    if (row == 0 || row == numRows - 1)
-        return true;
-
-    if (col == 0 || col == numCols - 1)
-        return true;
-
-    // Check up
-    if (CheckVisibleAlongColumn(matrix, row, col, 0, row, treeHeight))
-        return true;
-
-    // Check down
-    if (CheckVisibleAlongColumn(matrix, row, col, row, numRows, treeHeight))
-        return true;
-
-    // Check left
-    if (CheckVisibleAlongRow(matrix, row, col, 0, col, treeHeight))
-        return true;
-
-    // Check right
-    if (CheckVisibleAlongRow(matrix, row, col, col, numCols, treeHeight))
-        return true;
-
-    return false;
+    // Check left and right
+    const auto visibleAndScenicScoreAlongRow = CheckVisibleAlongRowOrColumn(matrix.GetRow(row), col, treeHeight);
+    const auto scenicScoreTotal = visibleAndScenicScoreAlongColumn.second * visibleAndScenicScoreAlongRow.second;
+    return std::make_pair(
+        visibleAndScenicScoreAlongColumn.first || visibleAndScenicScoreAlongRow.first, scenicScoreTotal);
 }
 
 void AdventOfCodeExercise8()
@@ -145,27 +154,25 @@ void AdventOfCodeExercise8()
     {
         matrix.InsertRow(lines[i]);
     }
-
-    const auto& m = matrix.GetMatrix();
     
     uint32_t totalPart1 = 0;
-
+    uint32_t totalPart2 = 0;
     for (auto i = 0; i < numRows; ++i)
     {
         for (auto j = 0; j < numCols; ++j)
         {
-            if (CheckVisible(m, i, j))
+            const auto visibleAndScenicScore = CheckVisible(matrix, i, j);
+            if (visibleAndScenicScore.first)
             {
                 totalPart1++;
             }
-            else
-            {
-                std::cout << i << "," << j << std::endl;
-            }
+
+            totalPart2 = std::max(totalPart2, visibleAndScenicScore.second);
         }
     }
 
     std::cout << totalPart1 << std::endl;
+    std::cout << totalPart2 << std::endl;
 }
 
 int main()
