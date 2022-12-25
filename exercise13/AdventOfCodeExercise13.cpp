@@ -139,11 +139,6 @@ std::shared_ptr<ListNode> ParseList(std::shared_ptr<ListNode> parent, const std:
             int unmatchedOpeningBrackets = 0;
             while (subIdx < workingStringSize)
             {
-                // TODO: the problem is here - we find the wrong one
-                // I think we might need to count opening brackets that we encounter along the way
-                // And for each opening bracket we see, ignore a closing bracket
-                // If we see a closing bracket and there is a comma following it
-                // then this is the closing bracket we are looking for.
                 if (workingString.at(subIdx) == '[')
                 {
                     unmatchedOpeningBrackets++;
@@ -296,15 +291,9 @@ Outcome CompareLists(const std::shared_ptr<ListNode> lhsRoot, const std::shared_
     return Outcome::Inconclusive;
 }
 
-// TODO:
-// For the sample inputs, I get a different answer depending on whether or not I break
-// while we're comparing expressions. This is quite confusing. Maybe it's a lifetime issue?
-// For the actual input, parsing fails because of some crazy bracket combinations on the first line
-void AdventOfCodeExercise13()
+void AdventOfCodeExercise13_Part1()
 {
     auto lines = ReadTextFile("input_exercise_13.txt");
-
-    const auto numRows = lines.size();
     assert(lines.size() > 0);
 
     uint32_t lineCount = 0;
@@ -351,18 +340,64 @@ void AdventOfCodeExercise13()
         }
     }
 
-
     auto totalPart1 = 0;
     for (const auto& i : indicesOfCorrectlyOrderedPackets)
     {
         totalPart1 += i;
-        std::cout << i << std::endl;
     }
 
-    std::cout << totalPart1 << std::endl;
+    std::cout << "Part 1: " << totalPart1 << std::endl;
+}
+
+bool ComparePart2(
+    const std::pair<std::string, std::shared_ptr<ListNode> >& lhs,
+    const std::pair<std::string, std::shared_ptr<ListNode> >& rhs)
+{
+    if (CompareLists(lhs.second, rhs.second) == Outcome::Right)
+        return true;
+    
+    return false;
+}
+
+void AdventOfCodeExercise13_Part2()
+{
+    auto lines = ReadTextFile("input_exercise_13.txt");
+    assert(lines.size() > 0);
+
+    // Insert divider packets
+    const auto dividerPacket1 = "[[2]]";
+    const auto dividerPacket2 = "[[6]]";
+    lines.push_back(dividerPacket1);
+    lines.push_back(dividerPacket2);
+
+    // Create an associative list
+    std::vector<std::pair<std::string, std::shared_ptr<ListNode> > > packetStrAndRootNodes;
+    packetStrAndRootNodes.reserve(lines.size());
+    for (const auto& line : lines)
+    {
+        if (line.empty())
+            continue;
+
+        packetStrAndRootNodes.push_back(std::make_pair(line, ParseList(nullptr, line)));
+    }
+
+    std::sort(packetStrAndRootNodes.begin(), packetStrAndRootNodes.end(), ComparePart2);
+
+    auto totalPart2 = 1;
+    for (auto i = 0; i < packetStrAndRootNodes.size(); ++i)
+    {
+        if (packetStrAndRootNodes[i].first == dividerPacket1 ||
+        packetStrAndRootNodes[i].first == dividerPacket2)
+        {
+            totalPart2 *= i + 1;
+        }
+    }
+
+    std::cout << "Part 2: " << totalPart2 << std::endl;
 }
 
 int main()
 {
-    AdventOfCodeExercise13();
+    AdventOfCodeExercise13_Part1();
+    AdventOfCodeExercise13_Part2();
 }
