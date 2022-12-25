@@ -303,12 +303,6 @@ Outcome CompareLists(const std::shared_ptr<ListNode> lhsRoot, const std::shared_
 void AdventOfCodeExercise13()
 {
     auto lines = ReadTextFile("input_exercise_13.txt");
-    
-    // Insert divider packets
-    const auto dividerPacket1 = "[[2]]";
-    const auto dividerPacket2 = "[[6]]";
-    lines.push_back(dividerPacket1);
-    lines.push_back(dividerPacket2);
 
     const auto numRows = lines.size();
     assert(lines.size() > 0);

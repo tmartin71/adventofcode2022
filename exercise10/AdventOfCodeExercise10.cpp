@@ -39,11 +39,6 @@ std::vector<std::string> Split(const std::string& input, const char& commandDeli
     return strings;
 }
 
-template<typename T, typename... Args>
-std::unique_ptr<T> make_unique(Args&&... args) {
-    return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
-}
-
 class Instruction
 {
 public:
@@ -151,6 +146,8 @@ private:
     std::shared_ptr<Instruction> m_currentInstruction;
 };
 
+// TODO: looks like the last line of pixels isn't quite right, but I
+// can still read the answer for 2.
 void AdventOfCodeExercise10()
 {
     const auto lines = ReadTextFile("input_exercise_10.txt");
@@ -170,6 +167,7 @@ void AdventOfCodeExercise10()
 
     while (true)
     {
+        // TODO: this can be made more efficient, but it's probably not trivial
         const auto& instructionType = processor.ProcessInstruction(*lineItr);
         if (instructionType->IsNoop())
         {
