@@ -18,7 +18,7 @@ std::vector<std::string> ReadTextFile(std::string inputFilename)
     myfile.open(inputFilename);
     if (myfile.is_open())
     {
-        while (getline(myfile,line))
+        while (getline(myfile, line))
         {
             output.push_back(std::string(line));
         }
@@ -31,18 +31,18 @@ std::vector<std::string> ReadTextFile(std::string inputFilename)
 struct pair_hash
 {
     template <class T1, class T2>
-    std::size_t operator () (const std::pair<T1,T2> &p) const
+    std::size_t operator()(const std::pair<T1, T2> &p) const
     {
         auto h1 = std::hash<T1>()(p.first);
         auto h2 = std::hash<T2>()(p.second);
 
         // Mainly for demonstration purposes, i.e. works but is overly simple
         // In the real world, use sth. like boost.hash_combine
-        return h1 ^ h2;  
+        return h1 ^ h2;
     }
 };
 
-const uint32_t AlphaToHeight(const char& s)
+const uint32_t AlphaToHeight(const char &s)
 {
     const auto u = std::toupper(s);
     return static_cast<int>(u - 'A' + 1);
@@ -58,7 +58,7 @@ public:
 
     ~Maze() = default;
 
-    void InsertRow(const std::string& row, const uint32_t rowNumber)
+    void InsertRow(const std::string &row, const uint32_t rowNumber)
     {
         std::vector<uint32_t> values;
 
@@ -95,17 +95,17 @@ public:
         m_rows.push_back(values);
     }
 
-    const std::vector<uint32_t>& GetRow(const uint32_t rowIndex) const
+    const std::vector<uint32_t> &GetRow(const uint32_t rowIndex) const
     {
         return m_rows[rowIndex];
     }
 
-    const uint32_t& operator()(const uint32_t row, const uint32_t col) const
+    const uint32_t &operator()(const uint32_t row, const uint32_t col) const
     {
         return m_rows[row][col];
     }
 
-    const std::vector<std::pair<uint32_t, uint32_t> > GetStartCandidates() const
+    const std::vector<std::pair<uint32_t, uint32_t>> GetStartCandidates() const
     {
         return m_startCandidates;
     }
@@ -115,12 +115,12 @@ public:
         return m_end;
     }
 
-    const std::vector<std::pair<uint32_t, uint32_t> > GetNeighbors(
+    const std::vector<std::pair<uint32_t, uint32_t>> GetNeighbors(
         const std::pair<uint32_t, uint32_t> node) const
     {
         const auto numRows = m_size.first;
         const auto numCols = m_size.second;
-        std::vector<std::pair<uint32_t, uint32_t> > points;
+        std::vector<std::pair<uint32_t, uint32_t>> points;
         const auto currentHeight = (*this)(node.first, node.second);
 
         for (int i = -1; i < 2; ++i)
@@ -133,7 +133,7 @@ public:
                 if (rowIdx == node.first && colIdx == node.second)
                     continue;
 
-                if (rowIdx < 0 || rowIdx > numRows - 1 || colIdx < 0 || colIdx > numCols -1)
+                if (rowIdx < 0 || rowIdx > numRows - 1 || colIdx < 0 || colIdx > numCols - 1)
                     continue;
 
                 // We can't move along the diagonal
@@ -152,19 +152,19 @@ public:
     }
 
 private:
-    std::vector<std::vector<uint32_t> > m_rows;
-    std::vector<std::pair<uint32_t, uint32_t> > m_startCandidates;
+    std::vector<std::vector<uint32_t>> m_rows;
+    std::vector<std::pair<uint32_t, uint32_t>> m_startCandidates;
     std::pair<uint32_t, uint32_t> m_end;
     std::pair<uint32_t, uint32_t> m_size;
 };
 
 const std::pair<uint32_t, uint32_t> FindMinDistanceNode(
-    const std::set<std::pair<uint32_t, uint32_t> >& nodesToExplore,
-    const std::unordered_map<std::pair<uint32_t, uint32_t>, uint32_t, pair_hash>& distances)
+    const std::set<std::pair<uint32_t, uint32_t>> &nodesToExplore,
+    const std::unordered_map<std::pair<uint32_t, uint32_t>, uint32_t, pair_hash> &distances)
 {
     std::pair<uint32_t, uint32_t> minNode;
     uint32_t minDist = INT32_MAX;
-    for (const auto& node : nodesToExplore)
+    for (const auto &node : nodesToExplore)
     {
         const auto d = distances.find(node);
         if (d != distances.end() && d->second < minDist)
@@ -178,10 +178,10 @@ const std::pair<uint32_t, uint32_t> FindMinDistanceNode(
 }
 
 std::unordered_map<std::pair<uint32_t, uint32_t>, uint32_t, pair_hash> BFSMaze(
-    const Maze& maze, const std::pair<uint32_t, uint32_t>& start)
+    const Maze &maze, const std::pair<uint32_t, uint32_t> &start)
 {
-    std::set<std::pair<uint32_t, uint32_t> > visited;
-    std::set<std::pair<uint32_t, uint32_t> > nodesToExplore;
+    std::set<std::pair<uint32_t, uint32_t>> visited;
+    std::set<std::pair<uint32_t, uint32_t>> nodesToExplore;
     std::unordered_map<std::pair<uint32_t, uint32_t>, uint32_t, pair_hash> distances;
 
     distances[start] = 0;
@@ -197,14 +197,14 @@ std::unordered_map<std::pair<uint32_t, uint32_t>, uint32_t, pair_hash> BFSMaze(
 
         visited.insert(node);
         if (node == maze.GetEnd())
-            return distances;        
+            return distances;
 
         const auto neighbors = maze.GetNeighbors(node);
-        for (const auto& n : neighbors)
+        for (const auto &n : neighbors)
         {
             if (visited.count(n) > 0)
                 continue;
-            
+
             if (distances.find(n) == distances.end())
                 distances[n] = INT32_MAX;
 
@@ -233,7 +233,7 @@ void AdventOfCodeExercise12()
     }
 
     uint32_t minDistance = INT32_MAX;
-    for (const auto& start : maze.GetStartCandidates())
+    for (const auto &start : maze.GetStartCandidates())
     {
         const auto distances = BFSMaze(maze, start);
         if (distances.find(maze.GetEnd()) != distances.end())
