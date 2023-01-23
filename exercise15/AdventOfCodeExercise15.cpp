@@ -54,42 +54,6 @@ std::string Trim(const std::string& str,
     return str.substr(strBegin, strRange);
 }
 
-class TaxicabBall
-{
-public:
-    TaxicabBall(const std::pair<int, int>& center, int radius)
-        : m_center(center)
-        , m_radius(radius)
-    {}
-
-    ~TaxicabBall() = default;
-
-    static int Distance(const std::pair<int, int> p, const std::pair<int, int> q)
-    {
-        return abs(p.first - q.first) + abs(p.second - q.second);
-    }
-
-    const int GetRadius() const
-    {
-        return m_radius;
-    }
-
-    const std::pair<int, int>& GetCenter() const
-    {
-        return m_center;
-    }
-
-private:
-    const std::pair<int, int> m_center;
-    const int m_radius;
-};
-
-int ParseLocationExpression(const std::string expr)
-{
-    const auto exprTokens = Split(expr, '=');
-    assert(exprTokens.size() == 2);
-    return std::stoi(exprTokens.at(1));
-}
 
 class Range
 {
@@ -118,11 +82,6 @@ public:
             m_max = input.GetMax();
     }
 
-    bool Contains(int point) const
-    {
-        return point <= m_max && point >= m_min;
-    }
-
     int Size() const
     {
         const auto size = m_max - m_min;
@@ -141,14 +100,6 @@ public:
         assert(m_min <= m_max);
     }
 
-    bool AreRangesOverlapping(const Range& rhs) const
-    {
-        return rhs.Contains(GetMin())
-            || rhs.Contains(GetMax())
-            || Contains(rhs.GetMin())
-            || Contains(rhs.GetMax());
-    }
-
     bool IsEmpty() const
     {
         return m_isEmpty;
@@ -159,6 +110,134 @@ private:
     int m_max;
     bool m_isEmpty;
 };
+
+class Line
+{
+public:
+    Line(const std::pair<int, int> p, const std::pair<int, int> q)
+    {
+        double px = static_cast<double>(p.first);
+        double py = static_cast<double>(p.second);
+        double qx = static_cast<double>(q.first);
+        double qy = static_cast<double>(q.second);
+
+        const auto denom = px - qx;
+        assert(denom != 0);
+        m_slope = (py - qy) / denom;
+
+        m_intercept = -m_slope * px + py;
+    }
+
+    ~Line() = default;
+
+    double GetSlope() const
+    {
+        return m_slope;
+    }
+
+    double GetIntercept() const
+    {
+        return m_intercept;
+    }
+
+    bool Intersect(const Line& other, std::pair<int, int>& point /* out */) const
+    {
+        // Solve the 2x2 system
+        const double a = -1 * GetSlope();
+        const double b = 1;
+        const double c = -1 * other.GetSlope();
+        const double d = 1;
+
+        const auto det = a * d - b * c;
+        if (det == 0)
+            return false;
+
+        // Multiply matrix inverse by the intercept
+        point.first = static_cast<int>((d / det) * GetIntercept() - (b / det) * other.GetIntercept());
+        point.second = static_cast<int>((-c / det) * GetIntercept() + (a / det) * other.GetIntercept());
+        
+        return true;
+    }
+
+private:
+    double m_slope;
+    double m_intercept;
+};
+
+class TaxicabBall
+{
+public:
+    TaxicabBall(const std::pair<int, int>& center, int radius)
+        : m_center(center)
+        , m_radius(radius)
+    {
+        SetLines();
+    }
+
+    TaxicabBall(const std::pair<int, int>& sensor, const std::pair<int, int>& beacon)
+        : m_center(sensor)
+    {
+        m_radius = Distance(sensor, beacon);
+        SetLines();
+    }
+
+    ~TaxicabBall() = default;
+
+    static int Distance(const std::pair<int, int>& p, const std::pair<int, int>& q)
+    {
+        return abs(p.first - q.first) + abs(p.second - q.second);
+    }
+
+    const int GetRadius() const
+    {
+        return m_radius;
+    }
+
+    const std::pair<int, int>& GetCenter() const
+    {
+        return m_center;
+    }
+
+    bool Contains(const std::pair<int, int>& point) const
+    {
+        return Distance(m_center, point) <= m_radius;
+    }
+
+    bool operator==(const TaxicabBall& other) const
+    {
+        return other.m_center == m_center && other.m_radius == m_radius;
+    }
+
+    void SetLines()
+    {
+        const auto N = std::make_pair(m_center.first, m_center.second - m_radius);
+        const auto E = std::make_pair(m_center.first + m_radius, m_center.second);
+        const auto S = std::make_pair(m_center.first, m_center.second + m_radius);
+        const auto W = std::make_pair(m_center.first - m_radius, m_center.second);
+
+        m_lines.push_back(Line(N, E));
+        m_lines.push_back(Line(E, S));
+        m_lines.push_back(Line(S, W));
+        m_lines.push_back(Line(W, N));
+    }
+
+    const std::vector<Line>& GetLines() const
+    {
+        return m_lines;
+    }
+
+private:
+    const std::pair<int, int> m_center;
+    int m_radius;
+    std::vector<Line> m_lines;
+};
+
+int ParseLocationExpression(const std::string expr)
+{
+    const auto exprTokens = Split(expr, '=');
+    assert(exprTokens.size() == 2);
+    return std::stoi(exprTokens.at(1));
+}
 
 const Range BallHorizontalLineIntersection(const TaxicabBall& ball, int y)
 {
@@ -185,7 +264,7 @@ const Range BallHorizontalLineIntersection(const TaxicabBall& ball, int y)
     return Range(false, xmin, xmax);
 }
 
-const std::pair<std::vector<TaxicabBall>, std::set<std::pair<int, int> > > ParseInput()
+const std::vector<TaxicabBall> ParseInput()
 {
     const auto lines = ReadTextFile("input_exercise_15.txt");
 
@@ -234,12 +313,11 @@ const std::pair<std::vector<TaxicabBall>, std::set<std::pair<int, int> > > Parse
             }
         }
 
-        beacons.insert(beacon);
         const auto radius = TaxicabBall::Distance(sensor, beacon);
         balls.push_back(TaxicabBall(sensor, radius));
     }
 
-    return std::make_pair(balls, beacons);
+    return balls;
 }
 
 bool RangeComparison(const Range& lhs, const Range& rhs)
@@ -249,13 +327,12 @@ bool RangeComparison(const Range& lhs, const Range& rhs)
 
 const std::vector<Range> ComputeIntersection(
     const std::vector<TaxicabBall>& balls,
-    const std::set<std::pair<int, int> > beacons,
     int y)
 {
     std::vector<Range> ballIntersections;
     ballIntersections.reserve(balls.size());
 
-    for (const auto ball : balls)
+    for (const auto& ball : balls)
     {
         const auto intersection = BallHorizontalLineIntersection(ball, y);
         
@@ -296,47 +373,21 @@ const std::vector<Range> ComputeIntersection(
     return asVector;
 }
 
-int ComputeBeaconsInIntersection(
-    const std::set<std::pair<int, int> >& beacons,
-    const std::vector<Range>& intersection,
-    int y)
-{
-    int beaconsInIntersection = 0;
-    for (const auto& beacon : beacons)
-    {
-        if (beacon.second == y)
-        {
-            for (const auto& r : intersection)
-            {
-                if (r.Contains(beacon.first))
-                    beaconsInIntersection++;
-            }
-        }
-    }
-
-    return beaconsInIntersection;
-}
-
 void AdventOfCodeExercise15_Part1()
 {
-    const auto ballsAndBeacons = ParseInput();
-    const auto balls = ballsAndBeacons.first;
-    const auto beacons = ballsAndBeacons.second;
+    const auto balls = ParseInput();
 
     const int y = 2000000;
-    auto intersection = ComputeIntersection(balls, beacons, y);
+    auto intersection = ComputeIntersection(balls, y);
     assert(intersection.size() == 1);
 
     std::cout << "Part 1:" << std::endl;
     std::cout << intersection.at(0).Size() << std::endl;
 }
-// TODO: another approach could be to walk the perimeter
-// of each ball and find the points that aren't contained in any
+
 void AdventOfCodeExercise15_Part2()
 {
-    const auto ballsAndBeacons = ParseInput();
-    const auto balls = ballsAndBeacons.first;
-    const auto beacons = ballsAndBeacons.second;
+    const auto balls = ParseInput();
 
     const auto xMin = 0;
     const auto xMax = 4000000;
@@ -345,42 +396,94 @@ void AdventOfCodeExercise15_Part2()
 
     int xCoordOfBeacon;
     int yCoordOfBeacon;
+
     for (auto i = yMin; i < yMax + 1; ++i)
     {
-        auto intersection = ComputeIntersection(balls, beacons, i);
+        auto intersection = ComputeIntersection(balls, i);
 
         for (auto& range : intersection)
         {
             range.Clip(xMin, xMax);
         }
 
-        if (intersection.size() == 1)
-        {
-            if (intersection.at(0).IsEmpty())
-                continue;
-
-            assert(intersection.at(0).Size() == xMax - xMin);
-        }
-        else if (intersection.size() == 2)
+        if (intersection.size() == 2)
         {
             std::sort(intersection.begin(), intersection.end(), RangeComparison);
             xCoordOfBeacon = intersection.at(0).GetMax() + 1;
             yCoordOfBeacon = i;
+            std::cout << "(" << xCoordOfBeacon << "," << yCoordOfBeacon << ")" << std::endl;
             break;
-            //std::cout << "(" << xCoordOfBeacon << "," << yCoordOfBeacon << ")" << std::endl;
-        }
-        else
-        {
-            assert(false);
         }
     }
 
-    // TODO: this still isn't working and it's not clear why
-    const long long int output = xCoordOfBeacon * 4000000 + yCoordOfBeacon;
+    const auto output = static_cast<long int>(xCoordOfBeacon) * 4000000 + static_cast<long int>(yCoordOfBeacon);
     std::cout << output << std::endl;
+}
+
+// This approach is super fast, but it currently fails to find the solution point
+// Not worth debugging at this point, but I'll keep it around as a reference for later.
+void AdventOfCodeExercise15_Part2_LinearAlgebra()
+{
+    const auto balls = ParseInput();
+
+    const auto xMin = 0;
+    const auto xMax = 4000000;
+    const auto yMin = 0;
+    const auto yMax = 4000000;
+
+    int xCoordOfBeacon;
+    int yCoordOfBeacon;
+
+    std::set<std::pair<int, int> > intersectionPoints;
+    for (const auto& ballOuter : balls)
+    {
+        for (const auto& ballInner : balls)
+        {
+            if (ballOuter == ballInner)
+            {
+                continue;
+            }
+            
+            for (const auto& lineOuter : ballOuter.GetLines())
+            {
+                for (const auto& lineInner : ballInner.GetLines())
+                {
+                    std::pair<int, int> intersection;
+                    const auto intersectExists = lineOuter.Intersect(lineInner, intersection);
+                    if (intersectExists)
+                    {
+                        intersectionPoints.insert(intersection);
+                    }
+                }
+            }
+        }
+    }
+
+    for (const auto& p : intersectionPoints)
+    {
+        if (p.first < xMin || p.first > xMax || p.second < yMin || p.second > yMax)
+            continue;
+        
+        bool containedInBall = false;
+        for (const auto& ball : balls)
+        {
+            if (ball.Contains(p))
+            {
+                containedInBall = true;
+                break;
+            }
+        }
+
+        if (!containedInBall)
+        {
+            std::cout << p.first << ", " << p.second << std::endl;
+            break;
+        }
+    }
 }
 
 int main()
 {
+    AdventOfCodeExercise15_Part1();
     AdventOfCodeExercise15_Part2();
 }
